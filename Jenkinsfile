@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven 'M3'       // Nom du Maven configuré dans Jenkins
-        jdk 'Java17'     // Nom du JDK configuré dans Jenkins (Java 17)
+        jdk 'openjdk version 17'     // Nom du JDK configuré dans Jenkins (Java 17)
     }
 
     environment {
