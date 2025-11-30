@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        GIT_CREDENTIALS = 'devops' // ID des credentials Jenkins pour GitHub
+        GIT_CREDENTIALS = 'dev_projet' // ID des credentials Jenkins pour GitHub
         TOMCAT_PATH = '/opt/tomcat/webapps' // Chemin vers Tomcat sur Linux
     }
 
