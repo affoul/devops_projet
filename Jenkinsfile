@@ -2,7 +2,7 @@ pipeline {
     agent any
     tools {
         maven 'M3'
-        jdk 'Java17'
+        jdk 'openjdk version 17'
     }
     environment {
         GIT_CREDENTIALS = 'github-auth-devops'
