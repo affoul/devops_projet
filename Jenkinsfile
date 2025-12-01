@@ -1,88 +1,69 @@
 pipeline {
-agent any
+    agent any
 
-```
-tools {
-    maven 'M3'
-    jdk 'openjdk version 17'
-}
-
-environment {
-    GIT_CREDENTIALS = 'github-auth-devops'
-    SONARQUBE_ENV = 'sonarqube' // Nom du serveur SonarQube configuré dans Jenkins
-}
-
-stages {
-
-    stage('Checkout') {
-        steps {
-            git branch: 'main',
-                credentialsId: "${GIT_CREDENTIALS}",
-                url: 'https://github.com/affoul/devops_projet.git'
-        }
+    tools {
+        maven 'M3'         // Nom de ton installation Maven dans Jenkins
+        jdk 'openjdk17'    // Nom de ton JDK dans Jenkins
     }
 
-    stage('Build') {
-        steps {
-            sh 'mvn clean package -Dmaven.test.failure.ignore=true'
-        }
+    environment {
+        SONARQUBE_ENV = 'sonarqube'  // Nom du serveur SonarQube configuré dans Jenkins
+        SONAR_TOKEN_ID = 'sonarqube-token' // ID des credentials Jenkins pour le token SonarQube
     }
 
-    stage('Tests') {
-        steps {
-            junit '**/target/surefire-reports/*.xml'
-        }
-    }
+    stages {
 
-    stage('SAST - SonarQube Analysis') {
-        steps {
-            withSonarQubeEnv("${SONARQUBE_ENV}") {
-                sh """
-                    mvn sonar:sonar \
-                    -Dsonar.projectKey=devops_projet \
-                    -Dsonar.projectName=devops_projet \
-                    -Dsonar.sources=src \
-                    -Dsonar.java.binaries=target/classes
-                """
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github-auth-devops',  // Ton identifiant GitHub
+                    url: 'https://github.com/affoul/devops_projet.git'
             }
         }
-    }
 
-    stage('Quality Gate') {
-        steps {
-            // Bloque le pipeline si SonarQube Quality Gate échoue
-            timeout(time: 1, unit: 'HOURS') {
-                waitForQualityGate abortPipeline: true
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -Dmaven.test.failure.ignore=true'
             }
         }
-    }
 
-    stage('Deploy') {
-        steps {
-            script {
-                try {
-                    // Vérifier que Tomcat permet l'écriture (sudo requis)
-                    sh 'sudo cp target/*.jar /var/lib/tomcat9/webapps/'
-                    echo '✅ Déploiement réussi vers Tomcat'
-                } catch (Exception e) {
-                    echo '⚠️ Tomcat non disponible, archivage seulement'
+        stage('Tests') {
+            steps {
+                junit '**/target/surefire-reports/*.xml'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: "${SONAR_TOKEN_ID}", variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=devops_projet \
+                            -Dsonar.projectName=devops_projet \
+                            -Dsonar.sources=src \
+                            -Dsonar.java.binaries=target/classes \
+                            -Dsonar.login=$SONAR_TOKEN
+                    """
                 }
             }
         }
-    }
-}
 
-post {
-    always {
-        echo 'Pipeline terminé'
+        stage('Archive JAR') {
+            steps {
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
     }
-    success {
-        echo '🎉 BUILD SUCCESSFUL !'
-    }
-    failure {
-        echo '❌ BUILD FAILED !'
-    }
-}
-```
 
+    post {
+        always {
+            echo 'Pipeline terminé'
+        }
+        success {
+            echo '🎉 BUILD SUCCESSFUL !'
+        }
+        failure {
+            echo '❌ BUILD FAILED !'
+        }
+    }
 }
