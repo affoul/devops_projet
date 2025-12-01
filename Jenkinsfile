@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         SONARQUBE_ENV = 'sonarqube'  // Nom du serveur SonarQube configuré dans Jenkins
-        SONAR_TOKEN_ID = 'sonarqube-token' // ID des credentials Jenkins pour le token SonarQube
+        SONAR_TOKEN_ID = 'jenkins-token' // ID des credentials Jenkins pour le token SonarQube
     }
 
     stages {
@@ -16,7 +16,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'github-auth-devops',  // Ton identifiant GitHub
+                    credentialsId: 'github-auth-devops',  //  identifiant GitHub
                     url: 'https://github.com/affoul/devops_projet.git'
             }
         }
@@ -43,6 +43,7 @@ pipeline {
                             -Dsonar.sources=src \
                             -Dsonar.java.binaries=target/classes \
                             -Dsonar.login=$SONAR_TOKEN
+
                     """
                 }
             }
