@@ -1,50 +1,72 @@
 pipeline {
     agent any
+
     tools {
         maven 'M3'
         jdk 'openjdk version 17'
     }
+
     environment {
         GIT_CREDENTIALS = 'github-auth-devops'
+        SONARQUBE_ENV = 'sonarqube'          // Nom configuré dans Jenkins
     }
+
     stages {
-        stage('Preparation') {
+
+        stage('Checkout') {
             steps {
                 git branch: 'main',
                     credentialsId: "${GIT_CREDENTIALS}",
                     url: 'https://github.com/affoul/devops_projet.git'
             }
         }
+
         stage('Build') {
             steps {
-                sh 'mvn -Dmaven.test.failure.ignore clean package'
+                sh 'mvn clean package -Dmaven.test.failure.ignore=true'
             }
         }
-        stage('Results') {
+
+        stage('Tests') {
             steps {
-                junit '**/target/surefire-reports/TEST-*.xml'
-                archiveArtifacts 'target/*.jar'
+                junit '**/target/surefire-reports/*.xml'
             }
         }
+
+        stage('SAST - SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh """
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=devops_projet \
+                        -Dsonar.projectName=devops_projet \
+                        -Dsonar.sources=src \
+                        -Dsonar.java.binaries=target/classes
+                    """
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
                 script {
                     try {
-                        sh 'cp target/projet_dev-1.0-SNAPSHOT.jar /opt/tomcat/webapps/'
+                        sh 'sudo cp target/*.jar /var/lib/tomcat9/webapps/'
                         echo '✅ Déploiement réussi vers Tomcat'
                     } catch (Exception e) {
-                        echo '⚠️  Tomcat non disponible, archivage seulement'
+                        echo '⚠️ Tomcat non disponible, archivage seulement'
                     }
                 }
             }
         }
     }
+
     post {
         always {
             echo 'Pipeline terminé'
         }
         success {
-            echo '✅✅✅ BUILD RÉUSSI ! ✅✅✅'
+            echo '🎉 BUILD SUCCESSFUL !'
         }
     }
 }
